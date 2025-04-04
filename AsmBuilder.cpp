@@ -1,59 +1,64 @@
 #include "AsmBuilder.h"
+#include "AsmLoads.h"
 #include <vector>
 
 namespace
 {
-
-    bool LoadConst(size_t LiteralIndex, size_t InstructioIndex)
+    /*bool IsUpcomingCondition(size_t Index)
     {
-        bool IsNextBytecodeMath = Package->Instructions[InstructioIndex + 1] == Bytecode::BINARY_OPERATOR;
+        return Bytecode::IsLoad(Assembly::Package->Instructions[Index + 1]) && Bytecode::IsComparisonOperator((Bytecode::BinaryOperators)Assembly::Package->Indices[Index + 2]);        
+    }*/
 
-        switch (Package->LiteralType[LiteralIndex].Type)
-        {
-            case Bytecode::DataTypes::Types::INT:
-            {
-                int32_t value = *(int32_t*)Package->Literals[LiteralIndex];
-                std::string StringValue = std::to_string(value);
 
-                if (!IsNextBytecodeMath)
-                {
-                    AddLine("mov",Conventions::MathRegisters[Conventions::MathRegisterPos++],StringValue);
-                    //std::cout << "Goes up \n";
-                }
-                else
-                {
-                    BinaryOperation(InstructioIndex+1,StringValue);
-                    //std::cout << "does binary operation \n";
-                    return true;
-                }
-                break;        
-            }
-        default:
-            break;
-        }
+    //bool LoadConst(size_t LiteralIndex, size_t InstructioIndex)
+    //{
+    //    bool IsNextBytecodeMath = Assembly::Package->Instructions[InstructioIndex + 1] == Bytecode::BINARY_OPERATOR;
 
-        return false;
-    }
+    //    switch (Assembly::Package->LiteralType[LiteralIndex].Type)
+    //    {
+    //        case Bytecode::DataTypes::Types::INT:
+    //        {
+    //            int32_t value = *(int32_t*)Assembly::Package->Literals[LiteralIndex];
+    //            std::string StringValue = std::to_string(value);
 
-    void BinaryOperation(size_t Index, std::string Value)
-    {
-        Bytecode::BinaryOperators BinaryOperator = (Bytecode::BinaryOperators)Package->Indices[Index];        
-        std::string Operator = AsmHelper::GetArithmeticOperator(BinaryOperator);
+    //            if (!IsNextBytecodeMath)
+    //            {
+    //                AddLine("mov",Conventions::MathRegisters[Conventions::MathRegisterPos++],StringValue);
+    //                //std::cout << "Goes up \n";
+    //            }
+    //            else
+    //            {
+    //                BinaryOperation(InstructioIndex+1,StringValue);
+    //                //std::cout << "does binary operation \n";
+    //                return true;
+    //            }
+    //            break;        
+    //        }
+    //    default:
+    //        break;
+    //    }
 
-        //std::cout << std::to_string(Conventions::MathRegisterPos) << '\n';
+    //    return false;
+    //}
 
-        AddLine(Operator, Conventions::MathRegisters[Conventions::MathRegisterPos-1], Value);
-        std::cout << "Goes down \n";
-    }
+    //void BinaryOperation(size_t Index, std::string Value)
+    //{
+    //    Bytecode::BinaryOperators BinaryOperator = (Bytecode::BinaryOperators)Assembly::Package->Indices[Index];        
+    //    std::string Operator = AsmHelper::GetArithmeticOperator(BinaryOperator);
 
+    //    //std::cout << std::to_string(Conventions::MathRegisterPos) << '\n';
+
+    //    AddLine(Operator, Conventions::MathRegisters[Conventions::MathRegisterPos-1], Value);
+    //    std::cout << "Goes down \n";
+    //}
     
     void GenerateStringLiterals()
     {
         bool IsFirst = true;
 
-        for (size_t i = 0; i < Package->LiteralSize; i++)
+        for (size_t i = 0; i < Assembly::Package->LiteralSize; i++)
         {
-            if (Package->LiteralType[i].Type == Bytecode::DataTypes::Types::STRING)
+            if (Assembly::Package->LiteralType[i].Type == Bytecode::DataTypes::Types::STRING)
             {
                 if (IsFirst)
                 {
@@ -61,7 +66,7 @@ namespace
                     IsFirst = false;
                 }
 
-                char* Cstr = (char*)Package->Literals[i];
+                char* Cstr = (char*)Assembly::Package->Literals[i];
 
                 std::string String = AsmHelper::CreateStringName(i) + " BYTE \"" + Cstr + "\", 0"; /// TODO: MAKE MORE VERSATILE
 
@@ -72,18 +77,20 @@ namespace
 
     void LoadParameters()
     {       
-        for (size_t i = 0; i < 3; i++)
+        size_t paramCount = Assembly::ParameterAmount > 3 ? 3 : Assembly::ParameterAmount;
+        for (size_t i = 0; i < paramCount; i++)
         {
-            std::string Address = "[rsp+ " + std::to_string(i * 8) + "]";
+            std::string Address = std::string(Conventions::MemoryAccess[0]) + " [rsp+" + std::to_string(i * 8) + "]";
 
             AddLine("mov",Address,Conventions::IntegerArguments[i]);
         }
 
-        if (ParameterAmount > 4) /// flm
+        if (Assembly::ParameterAmount > 4) /// flm
         {
             printf("nah too lazy to write for stack crap ");
         }
 
+		//Assembly::ParameterAmount = 0;
     }
 
     void GenerateFunctionPrologue()
@@ -91,6 +98,7 @@ namespace
         AddLine("push", "rbp");
         AddLine("mov", "rbp", "rsp");
         AddLine("sub","rsp","32"); /// required for 64 bits
+        Assembly::StackLocations.push(8); /// initial stack location 
     }
 
     void GenerateFunctionEpilogue()
@@ -98,13 +106,15 @@ namespace
         AddLine("mov","rsp","rbp");
         AddLine("pop","rbp");
         AddLine("ret");
+        Assembly::StackLocations.pop();
+		Assembly::ParameterAmount = 0;
     }
 
-    bool LoadParameter(size_t Index)
+    /*bool LoadParameter(size_t Index)
     {
-        bool IsNextBytecodeMath = Package->Instructions[Index + 1] == Bytecode::BINARY_OPERATOR;
+        bool IsNextBytecodeMath = Assembly::Package->Instructions[Index + 1] == Bytecode::BINARY_OPERATOR;
 
-        std::string Address = "[rsp+" + std::to_string(Package->Indices[Index] * 8) + "]";
+        std::string Address = "[rsp+" + std::to_string(Assembly::Package->Indices[Index] * 8 + 8) + "]";
 
         if (IsNextBytecodeMath)
         {
@@ -116,13 +126,13 @@ namespace
             AddLine("mov",Conventions::MathRegisters[Conventions::MathRegisterPos++], Address);
             return false;
         }
-    }
+    }*/
 
-    bool LoadFromStack(size_t Index)
+   /* bool LoadFromStack(size_t Index)
     {
-        bool IsNextBytecodeMath = Package->Instructions[Index + 1] == Bytecode::BINARY_OPERATOR;
-
-        std::string Address = "[rbp-" + std::to_string(Package->Indices[Index] * 8 + 8) + "]";
+        bool IsNextBytecodeMath = Assembly::Package->Instructions[Index + 1] == Bytecode::BINARY_OPERATOR;
+		
+        std::string Address = "[rbp-" + std::to_string(Assembly::Package->Indices[Index] * 8 + 8) + "]";
 
         if (IsNextBytecodeMath)
         {
@@ -134,49 +144,46 @@ namespace
             AddLine("mov", Conventions::MathRegisters[Conventions::MathRegisterPos++], Address);
             return false;
         }
-    }
+    }*/
 
-    void SetVariable()
+    void SetVariable()            
     {
-        std::string Address = "[rbp-" + std::to_string(CurrentStackLocation) + "]";
+        std::string Address = "[rbp-" + std::to_string(Assembly::StackLocations.top()) + "]";
 
-        CurrentStackLocation += 8; /// 8 bytes
+        Assembly::StackLocations.top() += 8; /// 8 bytes
 
-        AddLine("mov", Address, "eax");
+        AddLine("mov", Address, Conventions::MathRegisters[0]);
 
         Conventions::MathRegisterPos = 0;
     }
 
     void SetParameter()
     {
-
-
+		std::string Address = Conventions::IntegerArguments[Conventions::IntegerArgumentPos++];
+		AddLine("mov", Address, Conventions::MathRegisters[0]); /// inefficient cuz it could be direct no
+		Conventions::MathRegisterPos = 0;
     }
 
-    void AddLine(std::string First, std::string Second, std::string Third)
+}
+
+void AddLine(std::string First, std::string Second, std::string Third)
+{
+    Assembly::AssemblySource->append(First);
+    
+    if (!Second.empty())
     {
-        AssemblySource->append(First);
+        Assembly::AssemblySource->append(" " + Second);
 
-        if (!Second.empty())
+        if (!Third.empty())
         {
-            AssemblySource->append(" " + Second);
-
-            if (!Third.empty())
-            {
-                AssemblySource->append(", " + Third);
-            }
+            Assembly::AssemblySource->append(", " + Third);
 
         }
 
-        AssemblySource->append("\n");
     }
-}
 
-/// THE PROTOCOLE
-/// 
-/// 
-/// 
-/// 
+    Assembly::AssemblySource->append("\n");
+}
 
 void GenerateCode()
 {
@@ -185,27 +192,32 @@ void GenerateCode()
     GenerateFunctionPrologue();
 
     std::string CurrentFunctionName = "main";
-
     std::string CurrentRegister = "rax";
-
+	
     size_t FunctionCount = 0;
 
     Bytecode::BinaryOperators FirstOperator = Bytecode::DEFAULT;
     
-    bool SkipAnIteration = false;    
+    unsigned int SkipIterations = 0;    
 
-    for (size_t i = 1; i < Package->InstructionsSize; i++) /// since first instruction MUST be [FUNCTION]
+    for (size_t i = 1; i < Assembly::Package->InstructionsSize; i++) /// since first instruction MUST be [FUNCTION]
     {
-        if (SkipAnIteration)
+        if (SkipIterations > 0)
         {
-            SkipAnIteration = false;
+            SkipIterations--;
             continue;
-        }   
-
-        switch (Package->Instructions[i])
+        }
+        
+        switch (Assembly::Package->Instructions[i])
         {
+        case Bytecode::LOAD_CONST:
+			SkipIterations = AsmLoads::AsmLoads(i).LoadConst();            
+            break;
+        case Bytecode::LOAD_FROM_STACK:
+			SkipIterations = AsmLoads::AsmLoads(i).LoadFromStack();
+			break;
         case Bytecode::FUNCTION:
-            CurrentFunctionName = AsmHelper::CreateFunctionName(++FunctionCount);
+            CurrentFunctionName = AsmHelper::CreateFunctionName(FunctionCount++);
             AddLine(CurrentFunctionName, "PROC");
             GenerateFunctionPrologue();
             break;
@@ -214,62 +226,39 @@ void GenerateCode()
             AddLine(CurrentFunctionName,"ENDP");
             break;
         case Bytecode::GOTO:
-            AddLine("jmp", AsmHelper::GetLabelName(Package->Indices[i]));
+            AddLine("jmp", AsmHelper::GetLabelName(Assembly::Package->Indices[i]));
             break;
         case Bytecode::LABEL:
-            AddLine(AsmHelper::CreateLabelName(Package->Indices[i]) + ":");
+            AddLine(AsmHelper::CreateLabelName(Assembly::Package->Indices[i]) + ":");
             break;
         case Bytecode::CALL:
-            AddLine("call", AsmHelper::CreateFunctionName(Package->Indices[i]));
+            AddLine("call", AsmHelper::CreateFunctionName(Assembly::Package->Indices[i]));
+			Conventions::IntegerArgumentPos = 0; /// reset the integer argument position
             break; 
+        case Bytecode::MODIFY_FROM_STACK:
+            AddLine("mov", AsmHelper::CreateStackAddress(INDEX_TO_STACK_SIZE(Assembly::Package->Indices[i])),Conventions::MathRegisters[0]);
+            break;
         case Bytecode::SET_VARIABLE:
-            SetVariable();
-            //std::cout << "Goes down for set var \n";
+            AddLine("mov", AsmHelper::CreateStackAddress(Assembly::StackLocations.top()), Conventions::MathRegisters[0]);
+			Assembly::StackLocations.top() += 8; /// 8 bytes
             break;
-        case Bytecode::SET_PARAMETER:
-            Conventions::MathRegisterPos--;
-            //std::cout << "Goes down for set param \n";
-            break;
-        case Bytecode::LOAD_FROM_STACK:
-
-            if (ParameterAmount == 0) /// default stack [rbp-]
-            {
-                if (LoadFromStack(i))
-                {
-                    SkipAnIteration = true;
-                }
-            }
-            else if (Package->Indices[i] <= ParameterAmount) /// [rsp+]
-            {
-                if (LoadParameter(i))
-                {
-                    SkipAnIteration = true;
-                }
-            }            
-            continue;
+        /*case Bytecode::SET_PARAMETER:
+			SetParameter();
+            break;  */      
         case Bytecode::STACK_ALLOCATE:
-            AddLine("sub", "rsp", std::to_string(Package->Indices[i] * 8)); /// 8 cuz 8 byte variables
+            AddLine("sub", "rsp", std::to_string(Assembly::Package->Indices[i] * 8)); /// 8 cuz 8 byte variables
             break;
         case Bytecode::LOAD_PARAMETERS:
-            ParameterAmount = Package->Indices[i];
+            Assembly::ParameterAmount = Assembly::Package->Indices[i];
             LoadParameters();
-            break;
-        case Bytecode::LOAD_CONST:
-        {
-            bool DoesMathOp = LoadConst(Package->Indices[i],i); /// kinda stupid ngl
-
-            if (DoesMathOp)
-            {
-                SkipAnIteration = true;
-                continue;
-            }
-
-            break;
-        }
-        case Bytecode::BINARY_OPERATOR: /// all the loading bytecode should do the binary_opeartions for this so the only case should be register,register
+            break;  
+        case Bytecode::RETURN_VALUE:
+			Conventions::MathRegisterPos = 0;
+			break;
+        /*case Bytecode::BINARY_OPERATOR: /// all the loading bytecode should do the binary_opeartions for this so the only case should be register,register
         {
 
-            Bytecode::BinaryOperators BinaryOperator = (Bytecode::BinaryOperators)Package->Indices[i];
+            Bytecode::BinaryOperators BinaryOperator = (Bytecode::BinaryOperators)Assembly::Package->Indices[i];
 
             if (BinaryOperator == Bytecode::BinaryOperators::MODULUS)
             {
@@ -283,7 +272,7 @@ void GenerateCode()
                 std::cout << "Goes down \n";
             }
             break;
-        }
+        }*/
         default:
 
 
@@ -298,12 +287,12 @@ void GenerateCode()
 
 std::string BuildAssembly(Bytecode::BytecodePackage* Package)
 {
-    AssemblySource = new std::string();
-    ::Package = Package;
+    Assembly::AssemblySource = new std::string();
+    Assembly::Package = Package;
 
     GenerateStringLiterals();
     GenerateCode();
     Output();
 
-    return *AssemblySource;
+    return *Assembly::AssemblySource;
 }

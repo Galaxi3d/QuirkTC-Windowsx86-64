@@ -59,6 +59,15 @@ namespace Bytecode
 		return OP == ADDITION || OP == SUBSTRACTION || OP == MULTIPLICATION || OP == DIVISION;
 	}
 
+	inline bool IsComparisonOperator(BinaryOperators OP)
+	{
+		return OP == EQUALS || OP == EQUALS_NOT || OP == GREATER_THAN || OP == GREATER_OR_EQUAL || OP == LOWER_OR_EQUAL || OP == LOWER_THAN;
+	}
+
+	inline bool IsLoad(Bytecode OP)
+	{
+		return OP == LOAD_CONST || OP == LOAD_INT || OP == LOAD_PARAMETER || OP == LOAD_VARIABLE || OP == LOAD_FROM_STACK;
+	}
 
 	typedef struct
 	{
