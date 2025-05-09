@@ -27,9 +27,14 @@ inline bool AsmLoads::IsUpcomingSetToParameter() const
 	return Assembly::Package->Instructions[Index + 1] == Bytecode::SET_PARAMETER;
 }
 
-inline bool AsmLoads::IsUpcomingModifyVariable() const
+inline bool AsmLoads::IsUpcomingReplacingVariable() const /// TODO: DISTINCITON BETWEEN MODIFY AND REPLACE FROM STACk
 {
 	return Assembly::Package->Instructions[Index + 1] == Bytecode::MODIFY_FROM_STACK; /// todo: later we can simplfi x = x + 100 to x+=100 directly into asm
+}
+
+inline bool AsmLoads::IsUpcomingModifyVariable() const
+{
+	return Assembly::Package->Instructions[Index + 1] == Bytecode::BINARY_OPERATOR && Assembly::Package->Instructions[Index + 2] == Bytecode::MODIFY_FROM_STACK;
 }
 
 uint8_t AsmLoads::GenericLoad()
@@ -54,10 +59,15 @@ uint8_t AsmLoads::GenericLoad()
 		SetToParameter(); /// compiles LOAD,SET_PARAMETER
 		return 1;
 	}
+	else if (IsUpcomingReplacingVariable())
+	{
+		ReplaceVariable(); /// compiles LOAD, MODIFY_FROM_STACK
+		return 1;
+	}
 	else if (IsUpcomingModifyVariable())
 	{
-		ModifyVariable(); /// compiles LOAD, MODIFY_FROM_STACK
-		return 1;
+		ModifyVariable(); /// compiles LOAD, BINARY OPERATOR ,MODIFY_FROM_STACK
+		return 2;
 	}
 
 	/// default
@@ -101,19 +111,19 @@ inline void AsmLoads::Condtional() const
 	std::string FirstAddress = Address; /// STACK, ___ is accounted for here
 	std::string SecondAddress;
 
-	if (Assembly::Package->Instructions[Index] == Bytecode::LOAD_CONST) /// CONST,___
-	{
-		AddLine("mov", Conventions::MathRegisters[0], FirstAddress);
-		FirstAddress = Conventions::MathRegisters[0];
-	}	
+	/// CONST,___ or STACK,___
+	AddLine("mov", Conventions::MathRegisters[0], FirstAddress);
+	FirstAddress = Conventions::MathRegisters[Conventions::MathRegisterPos++];	
+	
 
 	if (Assembly::Package->Instructions[Index + 1] == Bytecode::LOAD_CONST) /// ____, CONST
 	{
 		SecondAddress = GetConstAddress(Index + 1);
 	}
 	else /// ____, STACK
-	{
-		SecondAddress = GetStackAddress(Index + 1);
+	{		
+		AddLine("mov", Conventions::MathRegisters[Conventions::MathRegisterPos], GetStackAddress(Index + 1));
+		SecondAddress = Conventions::MathRegisters[Conventions::MathRegisterPos++];		
 	}
 
 	AddLine("cmp", FirstAddress, SecondAddress);
@@ -133,31 +143,67 @@ inline void AsmLoads::Condtional() const
 	Conventions::MathRegisterPos = 0;
 }
 
-inline void AsmLoads::SetToStack() const
+inline void AsmLoads::SetToStack()
 {
+	if (Assembly::Package->DataSize[this->Index] == Bytecode::DataTypes::Types::STRING)
+	{
+		AddLine("lea", "rax", Address);
+		Address = "rax";
+	}
+	else
+	{
+		AddLine("mov", "rax", Address);
+		Address = "rax";
+	}
+
 	AddLine("mov", AsmHelper::CreateStackAddress(Assembly::StackLocations.top()), Address);
+	
 	Assembly::StackLocations.top() += 8; /// 8 bytes
 	Conventions::MathRegisterPos = 0;
 }
 
-inline void AsmLoads::SetToParameter() const
+inline void AsmLoads::SetToParameter() const 
 {
 	std::string Address = Conventions::IntegerArguments[Conventions::IntegerArgumentPos++];
+	if (Assembly::Package->DataSize[this->Index] == Bytecode::DataTypes::Types::STRING && IsAdressAStackAddress == false)
+	{
+		AddLine("lea", Address, this->Address);
+		return;
+	}
+
 	AddLine("mov", Address, this->Address);
 	Conventions::MathRegisterPos = 0;
 }
 
-inline void AsmLoads::ModifyVariable() const
+inline void AsmLoads::ReplaceVariable() 
 {
+	if (Assembly::Package->DataSize[this->Index] == Bytecode::DataTypes::Types::STRING)
+	{
+		AddLine("lea", "rax", Address);
+		Address = "rax";
+	}
+	else
+	{
+		AddLine("mov", "rax", Address);
+		Address = "rax";
+	}
+
 	AddLine("mov", AsmLoads::GetStackAddress(Index),Address);
 	Conventions::MathRegisterPos = 0;
+}
+
+inline void AsmLoads::ModifyVariable() /// this should be IMPOSSIBLE FOR A STRING
+{
+	std::string Operator = AsmHelper::GetArithmeticOperator((Bytecode::BinaryOperators)Assembly::Package->Indices[Index + 1]);
+
+	AddLine(Operator, GetStackAddress(this->Index + 2), Address);
 }
 
 inline std::string AsmLoads::GetStackAddress(size_t Index)
 {
 	if (Assembly::ParameterAmount > Assembly::Package->Indices[Index]) /// is rsp and not rbp
 	{
-		return std::string(Conventions::MemoryAccess[0]) + " [rsp+" + std::to_string(Assembly::Package->Indices[Index] * 8) + "]";
+		return std::string(Conventions::DEFAULT_ACCESSER) + " [rsp+" + std::to_string(Assembly::Package->Indices[Index] * 8) + "]";
 	}
 
 	return AsmHelper::CreateStackAddress(INDEX_TO_STACK_SIZE(Assembly::Package->Indices[Index]));
@@ -172,17 +218,18 @@ inline std::string AsmLoads::GetConstAddress(size_t Index)
 
 	switch (Assembly::Package->LiteralType[LiteralIndex].Type)
 	{
-	case Bytecode::DataTypes::Types::INT:
+	case Bytecode::DataTypes::Types::INT_32:
 	{
 		int32_t value = *(int32_t*)Assembly::Package->Literals[LiteralIndex];
 		Literal = std::to_string(value);		
 		break;
 	}
-	/*case Bytecode::DataTypes::Types::STRING:
+	case Bytecode::DataTypes::Types::STRING:
 	{
-		std::string StringValue = (char*)Assembly::Package->Literals[LiteralIndex];
-		return StringValue;	
-	}*/
+		/*std::string StringValue = (char*)Assembly::Package->Literals[LiteralIndex];*/
+		Literal = AsmHelper::CreateStringName(LiteralIndex); /// since we have to reference the string
+		break;
+	}
 	case Bytecode::DataTypes::Types::BOOL:
 	{
 		bool value = *(bool*)Assembly::Package->Literals[LiteralIndex];		
@@ -200,11 +247,13 @@ inline std::string AsmLoads::GetConstAddress(size_t Index)
 uint8_t AsmLoads::LoadFromStack()
 {
 	Address = GetStackAddress(Index);	
+	IsAdressAStackAddress = true; 
 	return GenericLoad();    
 }
 
 uint8_t AsmLoads::LoadConst()
 {
 	Address = GetConstAddress(Index);
+	IsAdressAStackAddress = false;
 	return GenericLoad();    
 }

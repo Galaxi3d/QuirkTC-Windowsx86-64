@@ -21,149 +21,144 @@
                 ((uint32_t)b3 << 24);   \
     } while (0)
 
-Bytecode::BytecodePackage* ExtractFileContents(const char* FilePath)
-{
-	FILE* file = fopen(FilePath, "rb");
+std::unique_ptr<Bytecode::BytecodePackage> ExtractFileContents(const char* FilePath)  
+{  
+	FILE* file = fopen(FilePath, "rb");  
 
-	if (!file)
-	{
-		printf("error");
-		exit(1);
-	}
+	if (!file)  
+	{  
+		printf("Cannot Open File %s \n", FilePath);  
+		exit(1);  
+	}  
 
-	char header[4] = { 0 };
-	fread(header, 1, 3, file);
-	if (strcmp(header, "BCP") != 0)
-	{
-		fclose(file);
-		printf("unknown");
-		exit(1);
-	}
+	char header[4] = { 0 };  
+	fread(header, 1, 3, file);  
+	if (strcmp(header, "QRK") != 0)  
+	{  
+		fclose(file);  
+		printf("Incompatible file");  
+		exit(1);  
+	}  
 
+	uint32_t instructionsSize = 0;  
+	uint32_t literalSize = 0;  
 
-	uint32_t instructionsSize = 0;
-	uint32_t literalSize = 0;
+	READ_LITTLE_ENDIAN(instructionsSize, file);  
+	READ_LITTLE_ENDIAN(literalSize, file);  
 
-	READ_LITTLE_ENDIAN(instructionsSize, file);
-	READ_LITTLE_ENDIAN(literalSize, file);
+	printf("Instructions Size: %i \n", instructionsSize);  
 
-	Bytecode::BytecodePackage* Package = (Bytecode::BytecodePackage*)malloc(sizeof(Bytecode::BytecodePackage));	
+	auto Package = std::make_unique<Bytecode::BytecodePackage>();  
 
-	if (!Package)
-	{
-		fclose(file);
-		printf("bad malloc");
-		exit(1);
-	}
+	if (!Package)  
+	{  
+		fclose(file);  
+		printf("bad malloc");  
+		exit(1);  
+	}  
 
-	Package->InstructionsSize = instructionsSize;
-	Package->LiteralSize = literalSize;
+	Package->InstructionsSize = instructionsSize;  
+	Package->LiteralSize = literalSize;  
 
-	Package->Instructions = NULL;
+	//Package->Instructions = nullptr;  
+	//Package->DataSize = nullptr;  
 
-	if (instructionsSize > 0)
-	{
-		Package->Instructions = (Bytecode::Bytecode*)malloc(instructionsSize * sizeof(uint8_t));		
-		if (Package->Instructions)
-		{
-			fread(Package->Instructions, 1, instructionsSize, file);			
-		}
-		else
-		{
-			perror("bad alloc");
-			exit(1);
-		}
-	}
+	if (instructionsSize > 0)  
+	{  
+		Package->Instructions = new Bytecode::Bytecode[instructionsSize];  
+		Package->DataSize = new Bytecode::DataTypes::Types[instructionsSize];  
+		if (Package->Instructions && Package->DataSize)  
+		{  
+			fread(Package->Instructions, 1, instructionsSize, file);  
+			fread(Package->DataSize, 1, instructionsSize, file);  
+		}  
+		else  
+		{  
+			perror("bad alloc");  
+			exit(1);  
+		}  
+	}  
 
-	Package->Indices = NULL;
+	Package->Indices = nullptr;  
 
-	if (instructionsSize > 0)
-	{
-		Package->Indices = (uint32_t*)malloc(instructionsSize * sizeof(uint32_t));
-		if (Package->Indices) {
-			for (uint32_t i = 0; i < instructionsSize; i++) {
-				uint32_t value = 0;				
-				READ_LITTLE_ENDIAN(value, file);
-				Package->Indices[i] = value;
-			}
-		}
-	}
+	if (instructionsSize > 0)  
+	{  
+		Package->Indices = new uint32_t[instructionsSize];  
+		if (Package->Indices) {  
+			for (uint32_t i = 0; i < instructionsSize; i++) {  
+				uint32_t value = 0;  
+				READ_LITTLE_ENDIAN(value, file);  
+				Package->Indices[i] = value;  
+			}  
+		}  
+	}  
 
-	Package->LiteralType = NULL;
+	Package->LiteralType = nullptr;  
 
-	if (literalSize > 0)
-	{
-		Package->LiteralType = (Bytecode::DataTypes::DataType*)malloc(literalSize * sizeof(Bytecode::DataTypes::DataType));
-		Package->Literals = (void**)malloc(literalSize * sizeof(void*));
+	if (literalSize > 0)  
+	{  
+		Package->LiteralType = new Bytecode::DataTypes::DataType[literalSize];  
+		Package->Literals = new void*[literalSize];  
 
-		if (Package->LiteralType) {
-			for (uint32_t i = 0; i < literalSize; i++) {
+		if (Package->LiteralType) {  
+			for (uint32_t i = 0; i < literalSize; i++) {  
 
-				uint8_t type;
-				READ_LITTLE_ENDIAN(type, file);						
-				Package->LiteralType[i].Type = static_cast<Bytecode::DataTypes::Types>(type);
+				uint8_t type;  
+				READ_LITTLE_ENDIAN(type, file);  
+				Package->LiteralType[i].Type = static_cast<Bytecode::DataTypes::Types>(type);  
 
-				if (Bytecode::DataTypes::IsGeneric(Package->LiteralType[i].Type))
-				{
-					Package->LiteralType[i].GenericType = ReadGenericType(file);
-				}
-				else
-				{
-					Package->LiteralType[i].GenericType = nullptr;
-				}
-												
-				switch (Package->LiteralType[i].Type)
-				{
-				case Bytecode::DataTypes::Types::INT:
-				{
-					int32_t value;
-					fread(&value, sizeof(int32_t), 1, file);
-					int* intPtr = new int(value);            
-					Package->Literals[i] = intPtr;  
+				if (Bytecode::DataTypes::IsGeneric(Package->LiteralType[i].Type))  
+				{  
+					Package->LiteralType[i].GenericType = ReadGenericType(file);  
+				}  
+				else  
+				{  
+					Package->LiteralType[i].GenericType = nullptr;  
+				}  
 
-					//printf("int value is %i \n", value);
+				switch (Package->LiteralType[i].Type)  
+				{  
+				case Bytecode::DataTypes::Types::INT_32:  
+				{  
+					int32_t value;  
+					fread(&value, sizeof(int32_t), 1, file);  
+					Package->Literals[i] = new int(value);  
+					break;  
+				}  
+				case Bytecode::DataTypes::Types::STRING:  
+				{  
+					uint32_t dataSize;  
+					READ_LITTLE_ENDIAN(dataSize, file);  
+					if (dataSize > 0)  
+					{  
+						char* value = new char[dataSize];  
+						fread(value, sizeof(char), dataSize, file);  
+						Package->Literals[i] = value;  
+					}  
+					else  
+					{  
+						exit(82);  
+					}  
+					break;  
+				}  
+				case Bytecode::DataTypes::Types::BOOL:  
+				{  
+					bool value;  
+					fread(&value, sizeof(bool), 1, file);  
+					Package->Literals[i] = new bool(value);  
+					break;  
+				}  
+				default:  
+					perror("Unidentified Data Type Detected");  
+					exit(99);  
+					break;  
+				}  
+			}  
+		}  
+	}  
 
-					break;
-				}
-				case Bytecode::DataTypes::Types::STRING:
-				{
-					uint32_t dataSize;
-					READ_LITTLE_ENDIAN(dataSize, file);
-					if (dataSize > 0)
-					{
-						char* value = new char[dataSize];
-						fread(value, sizeof(char), dataSize, file);
-						Package->Literals[i] = value;
-					}
-					else
-					{
-						exit(82);
-					}
-					break;
-				}
-				case Bytecode::DataTypes::Types::BOOL:
-				{
-					bool value;
-					fread(&value, sizeof(bool), 1, file);
-					bool* boolPtr = new bool(value);
-					Package->Literals[i] = boolPtr;
-					break;
-				}
-				default:
-					perror("Unidentified Data Type Detected");
-					exit(99);
-					break;
-				}
-
-				/*Package->Literals[i] = malloc(dataSize);
-
-				fread(Package->Literals[i], 1, dataSize, file);				*/
-			}
-		}
-	}
-
-	fclose(file);
-	return Package;
+	fclose(file);  
+	return Package;  
 }
 
 Bytecode::DataTypes::DataType* ReadGenericType(FILE* fPtr) /// UNTESTED

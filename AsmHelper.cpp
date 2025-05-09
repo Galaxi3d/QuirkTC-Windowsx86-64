@@ -3,7 +3,7 @@
 
 namespace AsmHelper
 {  
-    std::string CreateName(const std::string& prefix, size_t value)
+    static std::string CreateName(const std::string& prefix, size_t value)
     {
         return prefix + std::to_string(value);
     }
@@ -57,7 +57,7 @@ namespace AsmHelper
     std::string CreateStackAddress(size_t Address)
     {
         std::ostringstream oss;
-        oss << Conventions::MemoryAccess[0] << " [rbp-" << Address << "]";
+        oss << Conventions::DEFAULT_ACCESSER << " [rbp-" << Address << "]";
         return oss.str();
     }
 }

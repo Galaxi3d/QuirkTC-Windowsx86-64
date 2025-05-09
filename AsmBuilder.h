@@ -3,7 +3,7 @@
 #include "Assembly.h"
 #include "AsmHelper.h"
 
-std::string BuildAssembly(Bytecode::BytecodePackage* Package);
+std::string BuildAssembly(std::unique_ptr<Bytecode::BytecodePackage> Package);
 void AddLine(std::string First, std::string Second = "", std::string Third = "");
 
 namespace

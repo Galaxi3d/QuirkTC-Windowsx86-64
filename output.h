@@ -6,43 +6,43 @@
 #include <iostream>
 
 const std::unordered_map<Bytecode::Bytecode, std::string> BytecodeToString = {
-    {Bytecode::LOAD_CONST, "LOAD_CONST"},
-    {Bytecode::LOAD_INT, "LOAD_INT"},
-    {Bytecode::SET_PARAMETER, "SET_PARAMETER"},
-    {Bytecode::LOAD_PARAMETER, "LOAD_PARAMETER"},
-    {Bytecode::SET_VARIABLE, "SET_VARIABLE"},
-    {Bytecode::LOAD_VARIABLE, "LOAD_VARIABLE"},
-    {Bytecode::MODIFY_FROM_STACK,"MODIFY_FROM_STACK"},
-    {Bytecode::REVERSE,"REVERSE"},
-    {Bytecode::LOAD_PARAMETERS,"LOAD_PARAMETERS"},
-    {Bytecode::BINARY_OPERATOR,"BINARY_OPERATOR"},
-    {Bytecode::STACK_ALLOCATE,"STACK_ALLOCATE"},
-    
-    {Bytecode::STACK_RETURN, "STACK_RETURN"},
-    {Bytecode::RETURN_VALUE, "RETURN_VALUE"},
+    //{Bytecode::LOAD_CONST, "LOAD_CONST"},
+    //{Bytecode::LOAD_INT, "LOAD_INT"},
+    //{Bytecode::SET_PARAMETER, "SET_PARAMETER"},
+    //{Bytecode::LOAD_PARAMETER, "LOAD_PARAMETER"},
+    //{Bytecode::SET_VARIABLE, "SET_VARIABLE"},
+    //{Bytecode::LOAD_VARIABLE, "LOAD_VARIABLE"},
+    //{Bytecode::MODIFY_FROM_STACK,"MODIFY_FROM_STACK"},
+    //{Bytecode::REVERSE,"REVERSE"},
+    //{Bytecode::LOAD_PARAMETERS,"LOAD_PARAMETERS"},
+    //{Bytecode::BINARY_OPERATOR,"BINARY_OPERATOR"},
+    //{Bytecode::STACK_ALLOCATE,"STACK_ALLOCATE"},
+    //
+    //{Bytecode::STACK_RETURN, "STACK_RETURN"},
+    //{Bytecode::RETURN_VALUE, "RETURN_VALUE"},
 
-    {Bytecode::GOTO, "GOTO"},
-    {Bytecode::GOTO_IF, "GOTO_IF"},
-    {Bytecode::GOTO_IF_NOT, "GOTO_IF_NOT"},
+    //{Bytecode::GOTO, "GOTO"},
+    //{Bytecode::GOTO_IF, "GOTO_IF"},
+    //{Bytecode::GOTO_IF_NOT, "GOTO_IF_NOT"},
 
-    {Bytecode::CALL,"CALL"},
-    {Bytecode::CALL_EXTERN, "CALL_EXTERN"},
-    {Bytecode::LOAD_LIBRARY, "LOAD_LIBRARY"},
-    {Bytecode::FUNCTION, "FUNCTION"},
-    {Bytecode::FUNCTION_END, "FUNCTION_END"},
-    {Bytecode::LABEL, "LABEL"},
-    {Bytecode::LOAD_FROM_STACK, "LOAD_FROM_STACK"},
+    //{Bytecode::CALL,"CALL"},
+    ////{Bytecode::CALL_EXTERN, "CALL_EXTERN"},
+    //{Bytecode::LOAD_LIBRARY, "LOAD_LIBRARY"},
+    //{Bytecode::FUNCTION, "FUNCTION"},
+    //{Bytecode::FUNCTION_END, "FUNCTION_END"},
+    //{Bytecode::LABEL, "LABEL"},
+    //{Bytecode::LOAD_FROM_STACK, "LOAD_FROM_STACK"},
 };
 
 const std::unordered_map<Bytecode::DataTypes::Types, std::string> TypeToStringMap = {
-    {Bytecode::DataTypes::Types::INT, "INT"},
-    {Bytecode::DataTypes::Types::FLOAT, "FLOAT"},
-    {Bytecode::DataTypes::Types::STRING, "STRING"},
-    {Bytecode::DataTypes::Types::CHAR, "CHAR"},
-    {Bytecode::DataTypes::Types::VOID, "VOID"},
-    {Bytecode::DataTypes::Types::BOOL, "BOOL"},
-    {Bytecode::DataTypes::Types::LIST, "LIST"},
-    {Bytecode::DataTypes::Types::STACK, "STACK"}
+    //{Bytecode::DataTypes::Types::INT, "INT"},
+    //{Bytecode::DataTypes::Types::FLOAT, "FLOAT"},
+    //{Bytecode::DataTypes::Types::STRING, "STRING"},
+    //{Bytecode::DataTypes::Types::CHAR, "CHAR"},
+    //{Bytecode::DataTypes::Types::VOID, "VOID"},
+    //{Bytecode::DataTypes::Types::BOOL, "BOOL"},
+    //{Bytecode::DataTypes::Types::LIST, "LIST"},
+    //{Bytecode::DataTypes::Types::STACK, "STACK"}
 };
 
 void Out(Bytecode::BytecodePackage* Package)
@@ -57,7 +57,7 @@ void Out(Bytecode::BytecodePackage* Package)
 
         switch (Package->LiteralType[i].Type)
         {
-        case Bytecode::DataTypes::Types::INT:
+        case Bytecode::DataTypes::Types::INT_32:
             std::cout << *(uint32_t*)Literal << '\n';
             continue;
         case Bytecode::DataTypes::Types::STRING:

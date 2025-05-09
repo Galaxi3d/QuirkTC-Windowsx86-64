@@ -10,28 +10,42 @@ namespace Bytecode
 	{
 		enum class Types : int8_t
 		{
-			INT,
-			FLOAT,
-			STRING,
-			CHAR,
-			VOID,
 			BOOL,
+			UINT_64,
+			UINT_32,
+			UINT_16,
+			UINT_8,
+			INT_64,
+			INT_32,
+			INT_16,
+			INT_8,
+			FLOAT_128,
+			FLOAT_64,
+			FLOAT_32,
+			FLOAT_16,
+			STRING,
 			LIST,
-			STACK,
+			VOID,
 			DEFAULT,
 		};
 
 
 		struct DataType
 		{
+
 			/// TODO: create constructor for Type
 			Types Type;
-			struct DataType* GenericType = nullptr;
+			DataType* GenericType = nullptr;
+			DataType() {}
+			DataType(Types t)
+			{
+				this->Type = t;
+			}
 		};
 
 		inline bool IsGeneric(Types type)
 		{
-			return (type == Types::STACK || type == Types::LIST);
+			return (/*type == Types::STACK ||*/ type == Types::LIST);
 		}
 
 	}

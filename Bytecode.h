@@ -1,7 +1,6 @@
 #ifndef BYTECODE_H
 #define BYTECODE_H
 #include "DataTypes.h"
-#include "stdint.h"
 
 namespace Bytecode
 {
@@ -16,21 +15,16 @@ namespace Bytecode
 		LOAD_VARIABLE,
 		LOAD_FROM_STACK,
 		MODIFY_FROM_STACK,
-		STACK_ALLOCATE, /// how many local variables inside this function
-
+		STACK_ALLOCATE, /// how many local variables inside this function		
 		REVERSE, /// used for operations that can be reversed like substraction,division,power_of,modulus etc...		
-
 		BINARY_OPERATOR,
-
 		STACK_RETURN,
 		RETURN_VALUE,
-
 		GOTO,
 		GOTO_IF,
 		GOTO_IF_NOT,
-
 		CALL,
-		CALL_EXTERN,
+		CALL_STD,
 		LOAD_LIBRARY,
 		FUNCTION,
 		FUNCTION_END,
@@ -73,7 +67,9 @@ namespace Bytecode
 	{
 		Bytecode* Instructions;
 		unsigned int* Indices; /// can be ptrs
+		DataTypes::Types* DataSize;
 		size_t InstructionsSize; /// same as indices size
+
 		void** Literals;
 		DataTypes::DataType* LiteralType;
 		size_t LiteralSize;

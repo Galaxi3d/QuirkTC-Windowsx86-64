@@ -9,6 +9,8 @@ private:
     std::string Address;
     size_t Index;
 
+    bool IsAdressAStackAddress = false; /// TODO make this smarter
+
     inline bool IsUpcomingCondition() const;
         
     inline bool IsUpcomingMath() const;		
@@ -17,7 +19,9 @@ private:
 
     inline bool IsUpcomingSetToParameter() const;
 
-    inline bool IsUpcomingModifyVariable() const;
+    inline bool IsUpcomingReplacingVariable() const;
+
+	inline bool IsUpcomingModifyVariable() const;
 
     inline uint8_t GenericLoad();
 
@@ -25,11 +29,13 @@ private:
 
     inline void Condtional() const;
 
-	inline void SetToStack() const;
+	inline void SetToStack();
 
 	inline void SetToParameter() const;
 
-    inline void ModifyVariable() const;
+    inline void ReplaceVariable();
+
+	inline void ModifyVariable();
 
     inline static std::string GetStackAddress(size_t Index);
 
